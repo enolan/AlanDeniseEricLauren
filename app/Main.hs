@@ -83,7 +83,7 @@ allSubmaps = go . M.toList where
 data SetDifference v = Removed
                      | Added   v
                      | Changed v
-                     deriving (Show, Read)
+                     deriving (Eq, Show, Read)
 
 setDifference ::
     (Ord k, Eq v) => M.Map k v -> M.Map k v -> M.Map k (SetDifference v)
