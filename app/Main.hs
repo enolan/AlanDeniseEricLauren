@@ -9,14 +9,15 @@ import System.Exit (ExitCode(..))
 import System.Process
     (CreateProcess(..), createProcess, proc, waitForProcess)
 
+import ADEL
+
 main :: IO (M.Map String (SetDifference String))
-main = do
-    let candidateEnvs = map (applyDifference goodEnvMyMSYS) candidatesDiffs
-    results <- mapM (\e -> test e >>= \r -> return (e,r)) candidateEnvs
-    let failures = filter (isFailure . snd) results
-    let failureDiffs = map (setDifference goodEnvMyMSYS . fst) failures
-    let bestFailure = head $ sortBy (compare `on` M.size) failureDiffs
-    return bestFailure
+main = minimalSubMapSatisfyingM goodBadDiff testFun
+
+testFun :: M.Map String (SetDifference String) -> IO Bool
+testFun diff = do
+    let env = applyDifference goodEnvMyMSYS diff
+    isFailure <$> test env
 
 isFailure :: ExitCode -> Bool
 isFailure ExitSuccess = False
@@ -66,15 +67,6 @@ badEnvMyMSYS = M.fromList [("!;",";\\"),("ALLUSERSPROFILE","C:\\ProgramData"),("
 
 goodBadDiff :: M.Map String (SetDifference String)
 goodBadDiff = setDifference goodEnvMyMSYS badEnvMyMSYS
-
-candidatesDiffs :: [M.Map String (SetDifference String)]
-candidatesDiffs = allSubmaps goodBadDiff
-
-allSubmaps :: Ord k => M.Map k v -> [M.Map k v]
-allSubmaps = go . M.toList where
-    go :: Ord k => [(k, v)] -> [M.Map k v]
-    go []             = [M.empty]
-    go ((k, v): rest) = map (M.insert k v) (go rest) ++ go rest
 
 -- Regular M.difference only gives you things that are in the second map but
 -- not the first. We want to track things that are not in the second map but
