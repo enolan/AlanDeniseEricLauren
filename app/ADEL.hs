@@ -5,12 +5,11 @@
 --   2014. doi:10.3233/978-1-61499-419-0-1051 available at:
 --   http://ebooks.iospress.nl/publication/37115
 
-module ADEL where
+module ADEL (minimalSubMapSatisfyingM) where
 
 import Control.Monad.Random
 import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
-import Debug.Trace
 import System.Random.Shuffle (shuffleM)
 
 
@@ -125,7 +124,7 @@ dichotomize candidate shuffledMap lower upper p = do
         -- X union U_m->
         newCandidate = M.union candidate (vecToMap elsToAdd)
     newCandidateSatisifes <- p newCandidate
-    if trace ("lower = " ++ show lower ++ ", upper = " ++ show upper) $ lower /= upper
+    if lower /= upper
         then if newCandidateSatisifes
             then dichotomize candidate shuffledMap midpoint  upper         p
             else dichotomize candidate shuffledMap lower    (midpoint - 1) p
