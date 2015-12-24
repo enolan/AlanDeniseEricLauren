@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 -- | Construct minimal subsets and submaps satisfying arbitrary properties.
 --   Based on the ADEL algorithm from "An Optimal Iterative Algorithm for
 --   Extracting MUCs in a Black-box Constraint Network" Philippe Laborie, ECAI
