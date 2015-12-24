@@ -38,7 +38,7 @@ minimalSubMapSatisfyingM bigMap p = do
                     smallSubsetSoFar =
                         fromIntegral newI' <=
                         (logBase 2 $ fromIntegral $ M.size bigMap)
-                    elDistanceSum' = elDistanceSum + newI' - idx
+                    elDistanceSum' = elDistanceSum + newI' + 1 - idx
                     elCount' = elCount + 1
                     s' = elDistanceSum' `div` elCount'                        in
                     if smallSubsetSoFar
@@ -49,14 +49,14 @@ minimalSubMapSatisfyingM bigMap p = do
                                 else go
                                     newCandidate
                                     shuffledMap
-                                    newI'
+                                    (newI' + 1)
                                     s'
                                     elCount'
                                     elDistanceSum'
                         else go
                                 newCandidate
                                 shuffledMap
-                                newI'
+                                (newI' + 1)
                                 s'
                                 elCount'
                                 elDistanceSum'
