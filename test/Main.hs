@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances,TupleSections,TypeFamilies #-}
+import Control.Exception (ErrorCall(..), try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Random (evalRand, Rand, RandT)
 import Data.Functor.Identity (Identity)
@@ -47,6 +48,15 @@ main = hspec $ do
                     bigSet
                     (\m -> return $ M.isSubmapOf subsetNums m)
                 return $ res == subsetNums
+        prop
+            "throws an exception if the property is not true of the argument"
+            $ \size -> ioProperty $ do
+                res <- try (minimalSubMapSatisfyingM
+                           (makeSizedMap size)
+                           (return . const False))
+                case res of
+                    Left (ErrorCall _) -> return True
+                    _                  -> return False
 
 instance RandomGen g => Example (RandT g Identity Expectation) where
     type Arg (RandT g Identity Expectation) = g

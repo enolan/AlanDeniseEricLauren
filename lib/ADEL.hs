@@ -6,6 +6,7 @@
 
 module ADEL (minimalSubMapSatisfyingM) where
 
+import Control.Monad (unless)
 import Control.Monad.Random
 import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
@@ -21,6 +22,10 @@ import System.Random.Shuffle (shuffleM)
 minimalSubMapSatisfyingM :: forall m k v.
     (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
 minimalSubMapSatisfyingM bigMap p = do
+    trueOfWholeMap <- p bigMap
+    unless trueOfWholeMap $ error
+        "minimalSubMapSatisfyingM: supplied \
+\predicate isn't true of supplied map"
     shuffledMap <- V.fromList <$> (shuffleM $ M.toList bigMap)
     go M.empty shuffledMap 0 (V.length shuffledMap) 0 0
     where
