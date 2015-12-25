@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances,TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances,TupleSections,TypeFamilies #-}
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Random (evalRand, Rand, RandT)
 import Data.Functor.Identity (Identity)
@@ -6,6 +6,7 @@ import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (sort)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
+import Data.Ord (Down(..))
 import System.Random (getStdGen, mkStdGen, RandomGen, StdGen)
 import Test.Hspec
 import Test.Hspec.Core.Spec
@@ -31,7 +32,15 @@ main = hspec $ do
                     (makeSizedMap bigger)
                     (\m -> return $ M.size m >= smaller)
                 return $ M.size submap == smaller
-
+        prop "finds a specific arbitrary subset" $
+            \nums -> not (null nums) ==> idRand $ do
+                let nums' :: [Int] = map (\(Down n) -> n) $ sort $ map (Down . getPositive) nums
+                    bigSet = makeSizedMap (head nums')
+                    subsetNums = M.fromList $ map (,()) $ tail nums'
+                res <- minimalSubMapSatisfyingM
+                    bigSet
+                    (\m -> return $ M.isSubmapOf subsetNums m)
+                return $ res == subsetNums
 
 instance RandomGen g => Example (RandT g Identity Expectation) where
     type Arg (RandT g Identity Expectation) = g
