@@ -17,24 +17,30 @@ import ADEL
 
 main :: IO ()
 main = hspec $ do
-    describe "minimalSubMapSatisfyingM" $ before getStdGen $ do
-        it "finds the minimal submap of empty maps" $ idRand $ do
-            res <- minimalSubMapSatisfyingM (makeSizedMap 0) (const (return True))
-            return (res `shouldBe` M.empty)
-        it "finds a subset of size 5" $ idRand $ do
-            res <- minimalSubMapSatisfyingM (makeSizedMap 200) (\m -> return $ M.size m >= 5)
-            return (res `shouldSatisfy` (\m -> M.size m == 5))
-    describe "minimalSubMapSatisfyingM quickCheck" $ do
+    describe "minimalSubMapSatisfyingM" $ do
+        before getStdGen $ do
+            it "finds the minimal submap of empty maps" $ idRand $ do
+                res <- minimalSubMapSatisfyingM
+                    (makeSizedMap 0)
+                    (const (return True))
+                return (res `shouldBe` M.empty)
+            it "finds a subset of size 5" $ idRand $ do
+                res <- minimalSubMapSatisfyingM
+                    (makeSizedMap 200)
+                    (\m -> return $ M.size m >= 5)
+                return (res `shouldSatisfy` (\m -> M.size m == 5))
         prop "finds a subset of arbitrary size" $
             \sizeA sizeB -> idRand $ do
-                let [NonNegative smaller, NonNegative bigger] = sort [sizeA, sizeB]
+                let [NonNegative smaller, NonNegative bigger] =
+                        sort [sizeA, sizeB]
                 submap <- minimalSubMapSatisfyingM
                     (makeSizedMap bigger)
                     (\m -> return $ M.size m >= smaller)
                 return $ M.size submap == smaller
         prop "finds a specific arbitrary subset" $
             \nums -> not (null nums) ==> idRand $ do
-                let nums' :: [Int] = map (\(Down n) -> n) $ sort $ map (Down . getPositive) nums
+                let nums' :: [Int] = map (\(Down n) -> n) $ sort $
+                        map (Down . getPositive) nums
                     bigSet = makeSizedMap (head nums')
                     subsetNums = M.fromList $ map (,()) $ tail nums'
                 res <- minimalSubMapSatisfyingM
