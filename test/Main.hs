@@ -25,11 +25,12 @@ main = hspec $ do
             return (res `shouldSatisfy` (\m -> M.size m == 5))
     describe "minimalSubMapSatisfyingM quickCheck" $ do
         prop "finds a subset of arbitrary size" $
-            \(gen :: StdGen) (sizeA :: NonNegative Int) sizeB ->
+            \sizeA sizeB -> idRand $ do
                 let [NonNegative smaller, NonNegative bigger] = sort [sizeA, sizeB]
-                    submap = evalRand
-                        (minimalSubMapSatisfyingM (makeSizedMap bigger) (\m -> return $ M.size m >= smaller))
-                        gen in M.size submap == smaller
+                submap <- minimalSubMapSatisfyingM
+                    (makeSizedMap bigger)
+                    (\m -> return $ M.size m >= smaller)
+                return $ M.size submap == smaller
 
 
 instance RandomGen g => Example (RandT g Identity Expectation) where
@@ -43,10 +44,13 @@ instance RandomGen g => Example (RandT g Identity Expectation) where
 instance Arbitrary StdGen where
     arbitrary = mkStdGen <$> arbitrary
 
-idRand :: Rand g a -> Rand g a
+idRand :: Rand StdGen a -> Rand StdGen a
 idRand = id
 
 makeSizedMap :: Int -> M.Map Int ()
 makeSizedMap 0 = M.empty
 makeSizedMap n | n > 0 = M.insert n () $ makeSizedMap (n-1)
                | otherwise = error "makeSizedMap negative"
+
+instance Testable prop => Testable (Rand StdGen prop) where
+    property randAct = property $ \g -> evalRand randAct g
