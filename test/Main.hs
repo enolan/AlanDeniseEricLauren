@@ -6,7 +6,6 @@ import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (sort)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
-import Debug.Trace
 import System.Random (getStdGen, mkStdGen, RandomGen, StdGen)
 import Test.Hspec
 import Test.Hspec.Core.Spec
@@ -30,7 +29,7 @@ main = hspec $ do
                 let [NonNegative smaller, NonNegative bigger] = sort [sizeA, sizeB]
                     submap = evalRand
                         (minimalSubMapSatisfyingM (makeSizedMap bigger) (\m -> return $ M.size m >= smaller))
-                        gen in trace ("smaller = " ++ show smaller ++ ", bigger = " ++ show bigger) $ M.size submap == smaller
+                        gen in M.size submap == smaller
 
 
 instance RandomGen g => Example (RandT g Identity Expectation) where
