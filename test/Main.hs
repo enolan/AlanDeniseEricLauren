@@ -10,6 +10,7 @@ import Debug.Trace
 import System.Random (getStdGen, mkStdGen, RandomGen, StdGen)
 import Test.Hspec
 import Test.Hspec.Core.Spec
+import Test.Hspec.QuickCheck
 import Test.QuickCheck
 
 import ADEL
@@ -24,7 +25,7 @@ main = hspec $ do
             res <- minimalSubMapSatisfyingM (makeSizedMap 200) (\m -> return $ M.size m >= 5)
             return (res `shouldSatisfy` (\m -> M.size m == 5))
     describe "minimalSubMapSatisfyingM quickCheck" $ do
-        it "finds a subset of arbitrary size" $ property $
+        prop "finds a subset of arbitrary size" $
             \(gen :: StdGen) (sizeA :: NonNegative Int) sizeB ->
                 let [NonNegative smaller, NonNegative bigger] = sort [sizeA, sizeB]
                     submap = evalRand
