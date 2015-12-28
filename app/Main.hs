@@ -11,8 +11,9 @@ import System.Process
 
 import ADEL
 
-main :: IO (M.Map String (SetDifference String))
-main = minimalSubMapSatisfyingM goodBadDiff testFun
+main :: IO ()
+main = do res <- minimalSubMapSatisfyingM goodBadDiff testFun
+          print res
 
 testFun :: M.Map String (SetDifference String) -> IO Bool
 testFun diff = do
