@@ -1,8 +1,6 @@
 module Main(main) where
 
 import Control.Exception (bracket)
-import Data.Function (on)
-import Data.List (sortBy)
 import qualified Data.Map.Strict as M
 import System.Environment (getEnvironment, setEnv, unsetEnv)
 import System.Exit (ExitCode(..))
@@ -17,22 +15,12 @@ main = do res <- minimalSubMapSatisfyingM goodBadDiff testFun
 
 testFun :: M.Map String (SetDifference String) -> IO Bool
 testFun diff = do
-    let env = applyDifference goodEnvMyMSYS diff
-    isFailure <$> test env
+    let testEnv = applyDifference goodEnvMyMSYS diff
+    isFailure <$> runMakeInEnv testEnv
 
 isFailure :: ExitCode -> Bool
 isFailure ExitSuccess = False
 isFailure _           = True
-
-wordsBy :: (a -> Bool) -> [a] -> [[a]]
-wordsBy _ [] = []
-wordsBy p xs = case break p xs of
-                    (f, xs') -> case xs' of
-                        [] -> [f]
-                        _:xs'' -> f : wordsBy p xs''
-
-test :: M.Map String String -> IO ExitCode
-test env = runMakeInEnv env
 
 clearEnv :: IO ()
 clearEnv = do vars <- getEnvironment
