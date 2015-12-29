@@ -26,7 +26,7 @@ library
     default-language: Haskell2010
     default-extensions: BangPatterns ScopedTypeVariables
     hs-source-dirs: lib
-    ghc-options: -fdefer-typed-holes
+    ghc-options: -fdefer-typed-holes -Wall
 
 executable reducecase
     main-is: Main.hs
@@ -39,17 +39,19 @@ executable reducecase
         process >=1.2.3.0 && <1.3,
         random ==1.1.*,
         random-shuffle >=0.0.4 && <0.1,
-        vector >=0.10.12.3 && <0.11
+        vector >=0.10.12.3 && <0.11,
+        extra
     default-language: Haskell2010
     default-extensions: ScopedTypeVariables
     hs-source-dirs: app
-    ghc-options: -threaded -rtsopts -with-rtsopts=-N -fdefer-typed-holes
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N -fdefer-typed-holes -Wall
 
 executable dumpvars
     main-is: Dumpvars.hs
     build-depends: base
     default-language: Haskell2010
     hs-source-dirs: app
+    ghc-options: -Wall
 
 test-suite spec
     type: exitcode-stdio-1.0
