@@ -41,7 +41,7 @@ minimalSubMapSatisfyingM bigMap p = do
                             candidate
                             (uncurry M.singleton $ shuffledMap V.! newI')
                     smallSubsetSoFar =
-                        fromIntegral newI' <=
+                        (fromIntegral newI' :: Double) <=
                         (logBase 2 $ fromIntegral $ M.size bigMap)
                     elDistanceSum' = elDistanceSum + newI' + 1 - idx
                     elCount' = elCount + 1
@@ -122,7 +122,8 @@ accelerate' candidate shuffledMap idx s p lower = do
 dichotomize :: (Ord k, Monad m) =>
     M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) -> m Int
 dichotomize candidate shuffledMap lower upper p = do
-    let midpoint = ceiling $ (fromIntegral lower + fromIntegral upper) / 2
+    let midpoint =
+            ceiling $ (fromIntegral lower + fromIntegral upper :: Double) / 2
         -- U_m->
         elsToAdd = sliceToEnd midpoint shuffledMap
         -- X union U_m->
