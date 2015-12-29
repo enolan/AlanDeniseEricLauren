@@ -45,6 +45,12 @@ executable reducecase
     hs-source-dirs: app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -fdefer-typed-holes
 
+executable dumpvars
+    main-is: Dumpvars.hs
+    build-depends: base
+    default-language: Haskell2010
+    hs-source-dirs: app
+
 test-suite spec
     type: exitcode-stdio-1.0
     main-is: Main.hs
