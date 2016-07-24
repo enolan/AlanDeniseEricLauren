@@ -24,8 +24,7 @@ minimalSubMapSatisfyingM :: forall m k v.
 minimalSubMapSatisfyingM bigMap p = do
     trueOfWholeMap <- p bigMap
     unless trueOfWholeMap $ error
-        "minimalSubMapSatisfyingM: supplied \
-\predicate isn't true of supplied map"
+        "minimalSubMapSatisfyingM: supplied predicate isn't true of supplied map"
     shuffledMap <- V.fromList <$> (shuffleM $ M.toList bigMap)
     go M.empty shuffledMap 0 (V.length shuffledMap) 0 0
     where
@@ -143,3 +142,30 @@ sliceToEnd :: Int -> V.Vector a -> V.Vector a
 sliceToEnd x v = let len = V.length v in if x > len then
     error "sliceToEnd: index out of range" else
     V.slice x (len - x) v
+
+data KeyDiff v = Removed
+               | Added   v
+               | Changed v
+  deriving (Eq, Show, Read)
+
+-- | An invertible map difference. Regular M.difference only gives you things
+-- that are in the second map but not the first. This tracks keys that are not
+-- in the second map but are in the first, as well as keys that are in
+-- both maps with different values.
+setDifference ::
+    (Ord k, Eq v) => M.Map k v -> M.Map k v -> M.Map k (KeyDiff v)
+setDifference = M.mergeWithKey both left right where
+    both _ av bv = if av == bv then Nothing else Just $ Changed bv
+    left = M.map (const Removed)
+    right = M.map Added
+
+applyDifference :: Ord k => M.Map k v -> M.Map k (KeyDiff v) -> M.Map k v
+applyDifference = M.mergeWithKey both left right where
+    both _ _ Removed     = Nothing
+    both _ _ (Added _  ) = error "impossible, applyDifference both Added"
+    both _ _ (Changed v) = Just v
+    left = id
+    right = M.map checkDiff
+    checkDiff Removed     = error "impossible, applyDifference right Removed"
+    checkDiff (Added   v) = v
+    checkDiff (Changed _) = error "impossible, applyDifference right Changed"
