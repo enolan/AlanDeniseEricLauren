@@ -17,12 +17,12 @@ library
     exposed-modules:
         ADEL
     build-depends:
-        base >=4.8.1.0 && <4.9,
-        containers >=0.5.6.2 && <0.6,
-        MonadRandom >=0.4.1 && <0.5,
-        random ==1.1.*,
-        random-shuffle >=0.0.4 && <0.1,
-        vector >=0.10.12.3 && <0.11
+        base,
+        containers,
+        MonadRandom,
+        random,
+        random-shuffle,
+        vector
     default-language: Haskell2010
     default-extensions: BangPatterns ScopedTypeVariables
     hs-source-dirs: src
