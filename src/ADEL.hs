@@ -5,7 +5,7 @@
 --   available at: http://ebooks.iospress.nl/publication/37115
 
 module ADEL
-  (minimalSubMapSatisfyingM
+  (minimalSubmapSatisfying
   , minimalDifferenceSatisfying
   , KeyDiff(..)
   , mapDifference
@@ -27,9 +27,9 @@ import System.Random.Shuffle (shuffleM)
 --
 --     * the property is "upward-closed" i.e. for all maps N where the property is
 --      true, the property is true of all supermaps of N.
-minimalSubMapSatisfyingM :: forall m k v.
+minimalSubmapSatisfying :: forall m k v.
     (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
-minimalSubMapSatisfyingM bigMap p = do
+minimalSubmapSatisfying bigMap p = do
     trueOfWholeMap <- p bigMap
     unless trueOfWholeMap $ error
         "minimalSubMapSatisfyingM: supplied property isn't true of supplied map"
@@ -193,4 +193,4 @@ minimalDifferenceSatisfying :: (MonadRandom m, Eq v, Ord k) =>
 minimalDifferenceSatisfying falseSet trueSet prop =
   let largestDifference = mapDifference falseSet trueSet
       prop' diff = prop $ applyDifference falseSet diff in
-  minimalSubMapSatisfyingM largestDifference prop'
+  minimalSubmapSatisfying largestDifference prop'

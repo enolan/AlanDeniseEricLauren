@@ -18,15 +18,15 @@ import ADEL
 
 main :: IO ()
 main = hspec $ do
-    describe "minimalSubMapSatisfyingM" $ do
+    describe "minimalSubmapSatisfying" $ do
         before getStdGen $ do
             it "finds the minimal submap of empty maps" $ idRand $ do
-                res <- minimalSubMapSatisfyingM
+                res <- minimalSubmapSatisfying
                     (makeSizedMap 0)
                     (const (return True))
                 return (res `shouldBe` M.empty)
             it "finds a subset of size 5" $ idRand $ do
-                res <- minimalSubMapSatisfyingM
+                res <- minimalSubmapSatisfying
                     (makeSizedMap 200)
                     (\m -> return $ M.size m >= 5)
                 return (res `shouldSatisfy` (\m -> M.size m == 5))
@@ -34,7 +34,7 @@ main = hspec $ do
             \sizeA sizeB -> idRand $ do
                 let [NonNegative smaller, NonNegative bigger] =
                         sort [sizeA, sizeB]
-                submap <- minimalSubMapSatisfyingM
+                submap <- minimalSubmapSatisfying
                     (makeSizedMap bigger)
                     (\m -> return $ M.size m >= smaller)
                 return $ M.size submap == smaller
@@ -44,14 +44,14 @@ main = hspec $ do
                         map (Down . getPositive) nums
                     bigSet = makeSizedMap (head nums')
                     subsetNums = M.fromList $ map (,()) $ tail nums'
-                res <- minimalSubMapSatisfyingM
+                res <- minimalSubmapSatisfying
                     bigSet
                     (\m -> return $ M.isSubmapOf subsetNums m)
                 return $ res == subsetNums
         prop
             "throws an exception if the property is not true of the argument"
             $ \size -> ioProperty $ do
-                res <- try (minimalSubMapSatisfyingM
+                res <- try (minimalSubmapSatisfying
                            (makeSizedMap size)
                            (return . const False))
                 case res of
