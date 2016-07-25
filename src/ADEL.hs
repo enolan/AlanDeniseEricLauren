@@ -27,6 +27,9 @@ import System.Random.Shuffle (shuffleM)
 --
 --     * the property is "upward-closed" i.e. for all maps N where the property is
 --      true, the property is true of all supermaps of N.
+--
+--   This is a Las Vegas algorithm. You need 'MonadRandom' but the result is
+--   deterministic.
 minimalSubmapSatisfying :: forall m k v.
     (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
 minimalSubmapSatisfying bigMap p = do
@@ -185,6 +188,9 @@ applyDifference = M.mergeWithKey both left right where
 -- | Given a property P, a map for which P is false and a map for which P is
 -- true, find the minimal set of changes from the first map to the second map
 -- that makes the property true.
+--
+-- As above, this is a Las Vegas algorithm. You need 'MonadRandom', but the
+-- result is deterministic.
 minimalDifferenceSatisfying :: (MonadRandom m, Eq v, Ord k) =>
      M.Map k v -- ^ map for which the property is false.
   -> M.Map k v -- ^ map for which the property is true.
