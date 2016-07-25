@@ -1,8 +1,8 @@
--- | Construct minimal subsets and submaps satisfying arbitrary properties.
---   Based on the ADEL algorithm from "An Optimal Iterative Algorithm for
---   Extracting MUCs in a Black-box Constraint Network" Philippe Laborie, ECAI
---   2014. doi:10.3233/978-1-61499-419-0-1051 available at:
---   http://ebooks.iospress.nl/publication/37115
+-- | Construct minimal submaps satisfying arbitrary properties. This extends to
+--   sets by simply creating a @Map k ()@. Based on the ADEL algorithm from "An
+--   Optimal Iterative Algorithm for Extracting MUCs in a Black-box Constraint
+--   Network" Philippe Laborie, ECAI 2014. doi:10.3233/978-1-61499-419-0-1051
+--   available at: http://ebooks.iospress.nl/publication/37115
 
 module ADEL
   (minimalSubMapSatisfyingM
