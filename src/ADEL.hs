@@ -4,7 +4,12 @@
 --   2014. doi:10.3233/978-1-61499-419-0-1051 available at:
 --   http://ebooks.iospress.nl/publication/37115
 
-module ADEL (minimalSubMapSatisfyingM) where
+module ADEL
+  (minimalSubMapSatisfyingM
+  , minimalDifferenceSatisfying
+  , KeyDiff(..)
+  , mapDifference
+  , applyDifference) where
 
 import Control.Monad (unless)
 import Control.Monad.Random
@@ -143,22 +148,26 @@ sliceToEnd x v = let len = V.length v in if x > len then
     error "sliceToEnd: index out of range" else
     V.slice x (len - x) v
 
+-- | A change in a key of a 'M.Map'.
 data KeyDiff v = Removed
                | Added   v
                | Changed v
   deriving (Eq, Show, Read)
 
--- | An invertible map difference. Regular M.difference only gives you things
--- that are in the second map but not the first. This tracks keys that are not
--- in the second map but are in the first, as well as keys that are in
--- both maps with different values.
-setDifference ::
+-- | An invertible map difference. Regular 'M.difference' only gives you things
+-- that are in the first map but not the second. This tracks keys that are
+-- in the second map but not in the first, as well as keys that are in both maps
+-- with different values.
+mapDifference ::
     (Ord k, Eq v) => M.Map k v -> M.Map k v -> M.Map k (KeyDiff v)
-setDifference = M.mergeWithKey both left right where
+mapDifference = M.mergeWithKey both left right where
     both _ av bv = if av == bv then Nothing else Just $ Changed bv
     left = M.map (const Removed)
     right = M.map Added
 
+-- | Given a map and and a difference, apply the difference.
+--
+-- prop> applyDifference m (mapDifference m n) = n
 applyDifference :: Ord k => M.Map k v -> M.Map k (KeyDiff v) -> M.Map k v
 applyDifference = M.mergeWithKey both left right where
     both _ _ Removed     = Nothing
@@ -169,3 +178,16 @@ applyDifference = M.mergeWithKey both left right where
     checkDiff Removed     = error "impossible, applyDifference right Removed"
     checkDiff (Added   v) = v
     checkDiff (Changed _) = error "impossible, applyDifference right Changed"
+
+-- | Given a property P, a map for which P is false and a map for which P is
+-- true, find the minimal set of changes from the first map to the second map
+-- that makes the property true.
+minimalDifferenceSatisfying :: (MonadRandom m, Eq v, Ord k) =>
+     M.Map k v -- ^ map for which the property is false.
+  -> M.Map k v -- ^ map for which the property is true.
+  -> (M.Map k v -> m Bool) -- ^ the property
+  -> m (M.Map k (KeyDiff v))
+minimalDifferenceSatisfying falseSet trueSet prop =
+  let largestDifference = mapDifference falseSet trueSet
+      prop' diff = prop $ applyDifference falseSet diff in
+  minimalSubMapSatisfyingM largestDifference prop'
