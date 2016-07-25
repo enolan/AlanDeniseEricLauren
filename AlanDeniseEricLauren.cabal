@@ -12,6 +12,7 @@ description:
     Please see README.md
 category: Algoritms
 author: Echo Nolan
+extra-doc-files: README.md
 
 library
     exposed-modules:
