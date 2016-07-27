@@ -29,7 +29,8 @@ import System.Random.Shuffle (shuffleM)
 --      true, the property is true of all supermaps of N.
 --
 --   This is a Las Vegas algorithm. You need 'MonadRandom' but the result is
---   deterministic.
+--   deterministic provided the passed predicate is deterministic and there is a
+--   single unique minimal submap.
 minimalSubmapSatisfying :: forall m k v.
     (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
 minimalSubmapSatisfying bigMap p = do
@@ -189,8 +190,7 @@ applyDifference = M.mergeWithKey both left right where
 -- true, find the minimal set of changes from the first map to the second map
 -- that makes the property true.
 --
--- As above, this is a Las Vegas algorithm. You need 'MonadRandom', but the
--- result is deterministic.
+-- The comments re randomness from 'minimalSubmapSatisfying' apply.
 minimalDifferenceSatisfying :: (MonadRandom m, Eq v, Ord k) =>
      M.Map k v -- ^ map for which the property is false.
   -> M.Map k v -- ^ map for which the property is true.
