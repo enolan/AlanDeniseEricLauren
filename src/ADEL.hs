@@ -37,7 +37,7 @@ minimalSubmapSatisfying bigMap p = do
     trueOfWholeMap <- p bigMap
     unless trueOfWholeMap $ error
         "minimalSubMapSatisfyingM: supplied property isn't true of supplied map"
-    shuffledMap <- V.fromList <$> (shuffleM $ M.toList bigMap)
+    shuffledMap <- V.fromList <$> shuffleM (M.toList bigMap)
     go M.empty shuffledMap 0 (V.length shuffledMap) 0 0
     where
     go :: M.Map k v -> V.Vector (k, v) -> Int -> Int -> Int -> Int ->
@@ -53,7 +53,7 @@ minimalSubmapSatisfying bigMap p = do
                             (uncurry M.singleton $ shuffledMap V.! newI')
                     smallSubsetSoFar =
                         (fromIntegral newI' :: Double) <=
-                        (logBase 2 $ fromIntegral $ M.size bigMap)
+                        logBase 2 (fromIntegral $ M.size bigMap)
                     elDistanceSum' = elDistanceSum + newI' + 1 - idx
                     elCount' = elCount + 1
                     s' = elDistanceSum' `div` elCount'                        in

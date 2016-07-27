@@ -17,7 +17,7 @@ import Test.QuickCheck
 import ADEL
 
 main :: IO ()
-main = hspec $ do
+main = hspec $
     describe "minimalSubmapSatisfying" $ do
         before getStdGen $ do
             it "finds the minimal submap of empty maps" $ idRand $ do
@@ -46,7 +46,7 @@ main = hspec $ do
                     subsetNums = M.fromList $ map (,()) $ tail nums'
                 res <- minimalSubmapSatisfying
                     bigSet
-                    (\m -> return $ M.isSubmapOf subsetNums m)
+                    (return . M.isSubmapOf subsetNums)
                 return $ res == subsetNums
         prop
             "throws an exception if the property is not true of the argument"
