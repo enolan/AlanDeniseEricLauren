@@ -37,3 +37,10 @@ test-suite spec
                    random, transformers, MonadRandom
     default-language: Haskell2010
     default-extensions: ScopedTypeVariables
+
+benchmark bench
+   type: exitcode-stdio-1.0
+   main-is: Main.hs
+   hs-source-dirs: bench
+   build-depends: AlanDeniseEricLauren, base, containers, criterion
+   default-language: Haskell2010
