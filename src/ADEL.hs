@@ -30,7 +30,7 @@ import System.Random.Shuffle (shuffleM)
 --
 --   This is a Las Vegas algorithm. You need 'MonadRandom' but the result is
 --   deterministic provided the passed predicate is deterministic and there is a
---   single unique minimal submap.
+--   unique minimal submap.
 minimalSubmapSatisfying :: forall m k v.
     (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
 minimalSubmapSatisfying bigMap p = do
