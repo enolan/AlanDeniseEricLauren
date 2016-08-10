@@ -47,10 +47,8 @@ minimalSubmapSatisfying bigMap p = do
         case newI of
             Nothing    -> return candidate
             Just newI' ->
-                let newCandidate =
-                        M.union
-                            candidate
-                            (uncurry M.singleton $ shuffledMap V.! newI')
+                let newCandidate = uncurry
+                      M.insert (shuffledMap V.! newI') candidate
                     smallSubsetSoFar =
                         (fromIntegral newI' :: Double) <=
                         logBase 2 (fromIntegral $ M.size bigMap)
