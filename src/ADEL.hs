@@ -25,8 +25,8 @@ import System.Random.Shuffle (shuffleM)
 --
 --     * M satisfies the property.
 --
---     * the property is "upward-closed" i.e. for all maps N where the property is
---      true, the property is true of all supermaps of N.
+--     * the property is "upward-closed" i.e. for all maps N where the property
+--       is true, the property is true of all supermaps of N.
 --
 --   This is a Las Vegas-ish algorithm. You need 'MonadRandom' but the result is
 --   deterministic provided the passed predicate is deterministic and there is a
