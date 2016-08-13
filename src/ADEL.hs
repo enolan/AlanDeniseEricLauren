@@ -17,7 +17,6 @@ import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
 import System.Random.Shuffle (shuffleM)
 
-
 -- | Given a map M and a function that describes an upward-closed property on
 --   maps, return the minimal submap of M satisfying the property.
 --
@@ -94,36 +93,44 @@ findNext candidate shuffledMap idx p s = do
 accelerate :: (Ord k, Monad m) =>
     M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) ->
     m (Maybe (Int, Int))
-accelerate candidate shuffledMap idx s p =
-    accelerate' candidate shuffledMap idx s p idx
+accelerate candidate shuffledMap idx s p = let
+  startCandidate = addSliceToEndToMap
+    candidate
+    shuffledMap
+    (min (V.length shuffledMap) (idx + s))
+ in accelerate' startCandidate shuffledMap idx s p idx
 
-accelerate' :: (Ord k, Monad m) =>
-    M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) -> Int ->
-    m (Maybe (Int, Int))
-accelerate' candidate shuffledMap idx s p lower = do
-    let len = V.length shuffledMap
-        -- First index we're unioning.
-        l = min len (idx + s)
-        -- U_l->
-        elsToAdd = sliceToEnd l shuffledMap
-        -- X union U_l->
-        newCandidate = M.union candidate (vecToMap elsToAdd)
-    newCandidateSatisifes <- p newCandidate
-    if newCandidateSatisifes
-        then
-            if l == len
-                -- P is true of the candidate, because elsToAdd = []
-                then return Nothing
-                -- Otherwise, continue testing exponentially smaller submaps.
-                --
-                -- Can't easily preserve newCandidate here, because it shrinks
-                -- rather than grows each iteration. I'm not sure if this
-                -- affects the complexity analysis.
-                else accelerate' candidate shuffledMap idx (s*2) p l
-        else
-            -- P was true of candidate union U_idx+(s/2)->, which we examined
-            -- in the last iteration, unless this is the first iteration.
-            return $ Just (lower, l - 1)
+addSliceToEndToMap :: (Ord k) =>
+  M.Map k v -> V.Vector (k, v) -> Int -> M.Map k v
+addSliceToEndToMap start vect idx =
+  V.foldl' (\m (k,v) -> M.insert k v m) start $ sliceToEnd idx vect
+
+-- Test exponentially smaller submaps until we find one that doesn't satisfy
+-- the property, then return the interval that the smallest one must fall in, or
+-- Nothing if the original candidate satisfies it.
+accelerate' :: (Monad m, Ord k) =>
+  M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) -> Int ->
+  m (Maybe (Int, Int))
+accelerate' candidate shuffledMap idx s p lowerBound = do
+  let len = V.length shuffledMap
+      firstIdxAdded = min (idx + s) len
+  candidateSatisfies <- p candidate
+  if candidateSatisfies
+    then
+      if firstIdxAdded == len
+        then return Nothing -- didn't need to add anything to satisfy property
+        else let
+          newCandidate = rmSlice firstIdxAdded s candidate shuffledMap in
+          accelerate' newCandidate shuffledMap idx (s*2) p firstIdxAdded
+    else
+      return $ Just (lowerBound, firstIdxAdded - 1)
+
+-- Remove the elements between two indices of a vector from a map.
+rmSlice :: Ord k => Int -> Int -> M.Map k v -> V.Vector (k, v) -> M.Map k v
+rmSlice start len inMap elsVec = V.foldl' (\m (k,_) -> M.delete k m) inMap elsToRemove
+  where elsToRemove = if start + len <= V.length elsVec
+          then V.slice start len elsVec
+          else sliceToEnd start elsVec
 
 -- dichotomization takes the result of acceleration and finds the exact answer
 -- by binary search. the result of acceleration is the upper bound, the lower
