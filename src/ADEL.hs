@@ -11,8 +11,9 @@ module ADEL
   , mapDifference
   , applyDifference) where
 
-import Control.Monad (unless)
 import Control.Monad.Random
+import Control.Monad.Reader
+import Control.Monad.State.Strict
 import qualified Data.Vector as V
 import qualified Data.Map.Strict as M
 import System.Random.Shuffle (shuffleM)
@@ -30,135 +31,153 @@ import System.Random.Shuffle (shuffleM)
 --   This is a Las Vegas-ish algorithm. You need 'MonadRandom' but the result is
 --   deterministic provided the passed predicate is deterministic and there is a
 --   unique minimal submap.
-minimalSubmapSatisfying :: forall m k v.
-    (MonadRandom m, Ord k) => M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
+minimalSubmapSatisfying :: (MonadRandom m, Ord k) =>
+  M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k v)
 minimalSubmapSatisfying bigMap p = do
-    trueOfWholeMap <- p bigMap
-    unless trueOfWholeMap $ error
-        "minimalSubMapSatisfyingM: supplied property isn't true of supplied map"
-    shuffledMap <- V.fromList <$> shuffleM (M.toList bigMap)
-    go M.empty shuffledMap 0 (V.length shuffledMap) 0 0
-    where
-    go :: M.Map k v -> V.Vector (k, v) -> Int -> Int -> Int -> Int ->
-          m (M.Map k v)
-    go candidate shuffledMap idx s elCount elDistanceSum = do
-        newI <- findNext candidate shuffledMap idx p s
-        case newI of
-            Nothing    -> return candidate
-            Just newI' ->
-                let newCandidate = uncurry
-                      M.insert (shuffledMap V.! newI') candidate
-                    smallSubsetSoFar =
-                        (fromIntegral newI' :: Double) <=
-                        logBase 2 (fromIntegral $ M.size bigMap)
-                    elDistanceSum' = elDistanceSum + newI' + 1 - idx
-                    elCount' = elCount + 1
-                    s' = elDistanceSum' `div` elCount'                        in
-                    if smallSubsetSoFar
-                        then do
-                            newCandidateSatisifes <- p newCandidate
-                            if newCandidateSatisifes
-                                then return newCandidate
-                                else go
-                                    newCandidate
-                                    shuffledMap
-                                    (newI' + 1)
-                                    s'
-                                    elCount'
-                                    elDistanceSum'
-                        else go
-                                newCandidate
-                                shuffledMap
-                                (newI' + 1)
-                                s'
-                                elCount'
-                                elDistanceSum'
+  trueOfWholeMap <- p bigMap
+  unless trueOfWholeMap $ error
+    "minimalSubMapSatisfyingM: supplied property isn't true of supplied map"
+  runADELT bigMap p $ go 0 (M.size bigMap) 0 0
+  where
+    go idx step elDistanceSum elCount = do
+      shuffled <- fst <$> ask
+      newI <- findNext idx step
+      case newI of
+        Nothing -> get
+        Just newI' -> do
+          let smallSubsetSoFar = (fromIntegral newI' :: Double) <=
+                logBase 2 (fromIntegral $ M.size bigMap)
+              elDistanceSum' = elDistanceSum + newI' + 1 - idx
+              elCount' = elCount + 1
+              step' = elDistanceSum' `div` elCount'
+              recur = go (newI' + 1) step' elDistanceSum' elCount'
+          if smallSubsetSoFar
+            then do
+              modify $ \m -> V.foldl (\m' (k, _) -> M.delete k m') m (sliceToEnd (newI' + 1) shuffled)
+              wereDone <- mapSatisfies
+              if wereDone
+                then get
+                else do addSlice (newI' + 1) (V.length shuffled - newI' - 1)
+                        recur
+            else recur
 
--- Finds the largest index j such that P is true of the candidate unioned with
--- the members of the map to be minimized with indices >= j. Constraint: j >= i.
--- If P is true of the candidate unmodified, returns Nothing.
-findNext :: (Ord k, Monad m) =>
-    M.Map k v -> V.Vector (k, v) -> Int -> (M.Map k v -> m Bool) -> Int ->
-    m (Maybe Int)
-findNext candidate shuffledMap idx p s = do
-    mbInterval <- accelerate candidate shuffledMap idx s p
-    case mbInterval of
-        Nothing -> return Nothing
-        Just (lower, upper) ->
-            Just <$> dichotomize candidate shuffledMap lower upper p
+-- We need to carry around: the map being minimized, a random permutation of the
+-- keys, and the property of interest.
+type ADELT k v m a = (Ord k, Monad m) =>
+  StateT (M.Map k v) (ReaderT (V.Vector (k, v), M.Map k v -> m Bool) m) a
 
--- Acceleration step. We either find P is true of the candidate under
--- consideration, or we find an index l such that P is not true of the
--- candidate under consideration unioned with the elements of index >= than l.
-accelerate :: (Ord k, Monad m) =>
-    M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) ->
-    m (Maybe (Int, Int))
-accelerate candidate shuffledMap idx s p = let
-  startCandidate = addSliceToEndToMap
-    candidate
-    shuffledMap
-    (min (V.length shuffledMap) (idx + s))
- in accelerate' startCandidate shuffledMap idx s p idx
+runADELT :: (Ord k, MonadRandom m) =>
+  M.Map k v -> (M.Map k v -> m Bool) -> ADELT k v m a -> m a
+runADELT m p adelT = do
+  shuffledKeys <- V.fromList <$> shuffleM (M.toList m)
+  runReaderT (evalStateT adelT m) (shuffledKeys, p)
 
-addSliceToEndToMap :: (Ord k) =>
-  M.Map k v -> V.Vector (k, v) -> Int -> M.Map k v
-addSliceToEndToMap start vect idx =
-  V.foldl' (\m (k,v) -> M.insert k v m) start $ sliceToEnd idx vect
+mapSatisfies :: ADELT k v m Bool
+mapSatisfies = do
+  p <- snd <$> ask
+  mapBeingConstructed <- get
+  -- Never change, monad transformers
+  lift $ lift $ p mapBeingConstructed
 
--- Test exponentially smaller submaps until we find one that doesn't satisfy
--- the property, then return the interval that the smallest one must fall in, or
--- Nothing if the original candidate satisfies it.
-accelerate' :: (Monad m, Ord k) =>
-  M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) -> Int ->
-  m (Maybe (Int, Int))
-accelerate' candidate shuffledMap idx s p lowerBound = do
-  let len = V.length shuffledMap
-      firstIdxAdded = min (idx + s) len
-  candidateSatisfies <- p candidate
-  if candidateSatisfies
-    then
-      if firstIdxAdded == len
-        then return Nothing -- didn't need to add anything to satisfy property
-        else let
-          newCandidate = rmSlice firstIdxAdded s candidate shuffledMap in
-          accelerate' newCandidate shuffledMap idx (s*2) p firstIdxAdded
-    else
-      return $ Just (lowerBound, firstIdxAdded - 1)
+-- Find the next element of the minimal submap or return Nothing if the current
+-- candidate already satisfies the property.
+-- Postcondition: the map has exactly the elements between idx and the return
+-- value removed.
+findNext :: Int -> Int -> ADELT k v m (Maybe Int)
+findNext idx step = do
+  mbInterval <- accelerate idx step
+  case mbInterval of
+    Nothing             -> return Nothing
+    Just (lower, upper) ->
+      Just <$> dichotomize lower upper
 
--- Remove the elements between two indices of a vector from a map.
+-- Acceleration step: we test exponentially smaller submaps until we either find
+-- the interval the next element of the minimal submap must be in, or find out
+-- the property is true with all the elements after idx removed.
+-- Precondition: the property is satisfied
+-- Postcondition:
+--   - if Just is returned, the map has exactly the elements with indices
+--     between idx and the returned upper bound removed and the property is not
+--     satisfied.
+--   - if Nothing is returned, the map has all elements after idx removed.
+accelerate :: Int -> Int -> ADELT k v m (Maybe (Int, Int))
+accelerate idx step = do
+  shuffled <- fst <$> ask
+  if idx >= V.length shuffled
+    then return Nothing
+    else do modify $ \m -> rmSlice idx step m shuffled
+            accelerate' idx step idx
+
+-- Precondition: the elements between idx and idx + step and not in the map.
+accelerate' :: Int -> Int -> Int -> ADELT k v m (Maybe (Int, Int))
+accelerate' idx step lowerBound = do
+  shuffled <- fst <$> ask
+  satisfies <- mapSatisfies
+  if satisfies
+    then if idx + step < V.length shuffled
+            then do modify $ \m -> rmSlice (idx + step) step m shuffled
+                    accelerate' idx (step * 2) (idx + step)
+            else return Nothing
+    else return $ Just (lowerBound, min (V.length shuffled) (idx + step) - 1)
+
+-- Remove the len elements in a vector starting at start from a map.
 rmSlice :: Ord k => Int -> Int -> M.Map k v -> V.Vector (k, v) -> M.Map k v
-rmSlice start len inMap elsVec = V.foldl' (\m (k,_) -> M.delete k m) inMap elsToRemove
+rmSlice start len inMap elsVec =
+  V.foldl' (\m (k,_) -> M.delete k m) inMap elsToRemove
   where elsToRemove = if start + len <= V.length elsVec
           then V.slice start len elsVec
           else sliceToEnd start elsVec
 
--- dichotomization takes the result of acceleration and finds the exact answer
--- by binary search. the result of acceleration is the upper bound, the lower
--- bound is idx+s/2
-dichotomize :: (Ord k, Monad m) =>
-    M.Map k v -> V.Vector (k, v) -> Int -> Int -> (M.Map k v -> m Bool) -> m Int
-dichotomize candidate shuffledMap lower upper p = do
-    let midpoint =
-            ceiling $ (fromIntegral lower + fromIntegral upper :: Double) / 2
-        -- U_m->
-        elsToAdd = sliceToEnd midpoint shuffledMap
-        -- X union U_m->
-        newCandidate = M.union candidate (vecToMap elsToAdd)
-    newCandidateSatisifes <- p newCandidate
-    if lower /= upper
-        then if newCandidateSatisifes
-            then dichotomize candidate shuffledMap midpoint  upper         p
-            else dichotomize candidate shuffledMap lower    (midpoint - 1) p
-        else return lower
-
-vecToMap :: Ord k => V.Vector (k, v) -> M.Map k v
-vecToMap = V.foldl' (\m (k, v) -> M.insert k v m) M.empty
+addSlice :: Int -> Int -> ADELT k v m ()
+addSlice idx len = do
+  vect <- fst <$> ask
+  let sliceToAdd = V.slice idx len vect
+  modify $ \m -> V.foldl
+    (\m' (k, v) -> M.insert k v m')
+    m
+    sliceToAdd
 
 -- Slice from a given index (inclusive) to the end of a vector.
 sliceToEnd :: Int -> V.Vector a -> V.Vector a
 sliceToEnd x v = let len = V.length v in if x > len then
     error "sliceToEnd: index out of range" else
     V.slice x (len - x) v
+
+-- Given an interval, find the next element of the minimal submap by binary
+-- search.
+-- Precondition:
+--   - the elements with indices greater than the upper bound are in the map
+--   - the minimal next element has an index between the lower and upper bounds
+-- Postcondition: All the elements after the initial lower bound and before the
+-- returned index are removed.
+dichotomize :: Int -> Int -> ADELT k v m Int
+dichotomize lower upper = do
+  let midpoint' = midpoint lower upper
+  addSlice midpoint' (upper - midpoint' + 1)
+  dichotomize' lower upper
+
+-- Precondition: the elements with indices >= ceil((lower + upper) / 2) are in
+-- the map.
+dichotomize' :: Int -> Int -> ADELT k v m Int
+dichotomize' lower upper = do
+  shuffled <- fst <$> ask
+  let midpoint' = midpoint lower upper
+  if lower == upper
+    then do addSlice lower 1
+            return lower
+    else do
+      satisfies <- mapSatisfies
+      if satisfies
+        then do let newMidpoint = midpoint midpoint' upper
+                modify $ \m -> rmSlice midpoint' (newMidpoint - midpoint') m shuffled
+                dichotomize' midpoint' upper
+        else do let newMidpoint = midpoint lower (midpoint' - 1)
+                addSlice newMidpoint (midpoint' - newMidpoint)
+                dichotomize' lower (midpoint' - 1)
+
+midpoint :: Int -> Int -> Int
+midpoint lower upper = ceiling $
+        (fromIntegral lower + fromIntegral upper :: Double) / 2
 
 -- | A change in a key of a 'M.Map'.
 data KeyDiff v = Removed
@@ -195,12 +214,9 @@ applyDifference = M.mergeWithKey both left right where
 -- true, find the minimal set of changes from the first map to the second map
 -- that makes the property true.
 --
--- The comments re randomness from 'minimalSubmapSatisfying' apply.
-minimalDifferenceSatisfying :: (MonadRandom m, Eq v, Ord k) =>
-     M.Map k v -- ^ map for which the property is false.
-  -> M.Map k v -- ^ map for which the property is true.
-  -> (M.Map k v -> m Bool) -- ^ the property
-  -> m (M.Map k (KeyDiff v))
+-- The comments re randomness from 'minimalSubmapSatisfying' applies.
+minimalDifferenceSatisfying :: (Eq v, Ord k, MonadRandom m) =>
+  M.Map k v -> M.Map k v -> (M.Map k v -> m Bool) -> m (M.Map k (KeyDiff v))
 minimalDifferenceSatisfying falseSet trueSet prop =
   let largestDifference = mapDifference falseSet trueSet
       prop' diff = prop $ applyDifference falseSet diff in
