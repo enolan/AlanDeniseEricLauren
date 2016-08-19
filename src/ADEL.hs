@@ -132,7 +132,7 @@ addSlice :: Int -> Int -> ADELT k v m ()
 addSlice idx len = do
   vect <- fst <$> ask
   let sliceToAdd = V.slice idx len vect
-  modify $ \m -> V.foldl
+  modify $ \m -> V.foldl'
     (\m' (k, v) -> M.insert k v m')
     m
     sliceToAdd
