@@ -40,26 +40,15 @@ minimalSubmapSatisfying bigMap p = do
   runADELT bigMap p $ go 0 (M.size bigMap) 0 0
   where
     go idx step elDistanceSum elCount = do
-      shuffled <- fst <$> ask
       newI <- findNext idx step
       case newI of
         Nothing -> get
         Just newI' -> do
-          let smallSubsetSoFar = (fromIntegral newI' :: Double) <=
-                logBase 2 (fromIntegral $ M.size bigMap)
-              elDistanceSum' = elDistanceSum + newI' + 1 - idx
+          let elDistanceSum' = elDistanceSum + newI' + 1 - idx
               elCount' = elCount + 1
               step' = elDistanceSum' `div` elCount'
               recur = go (newI' + 1) step' elDistanceSum' elCount'
-          if smallSubsetSoFar
-            then do
-              modify $ \m -> V.foldl (\m' (k, _) -> M.delete k m') m (sliceToEnd (newI' + 1) shuffled)
-              wereDone <- mapSatisfies
-              if wereDone
-                then get
-                else do addSlice (newI' + 1) (V.length shuffled - newI' - 1)
-                        recur
-            else recur
+          recur
 
 -- We need to carry around: the map being minimized, a random permutation of the
 -- keys, and the property of interest.
