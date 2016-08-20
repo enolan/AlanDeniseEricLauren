@@ -11,7 +11,7 @@ mapUpTo x = M.fromList $ map (,()) [0 .. x]
 
 findNofM :: Int -> Int -> Benchmark
 findNofM numToFind totalNum = if numToFind > totalNum
-  then error "findNofM numToFind > totalNum"
+  then bench "numToFind > totalNum" $ nfIO (return ()) --error "findNofM numToFind > totalNum"
   else env
          (return (mapUpTo numToFind, mapUpTo totalNum))
          (\ ~(find, whole) -> bench
@@ -27,7 +27,11 @@ findNone = findNofM 0
 findAll :: Int -> Benchmark
 findAll n = findNofM n n
 
+range = [0, 2500..100000]
+
 main = defaultMain $ concat
-  [map findHalf [0,10..200],
-   map findNone [0,10..200],
-   map findAll  [0,10..200]]
+  [map findHalf [0,2500..20000],
+   map findAll  range,
+   map findNone range,
+   map (findNofM 20) range,
+   map (findNofM 50) range]

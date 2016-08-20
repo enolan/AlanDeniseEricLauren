@@ -28,7 +28,7 @@ library
     default-language: Haskell2010
     default-extensions: FlexibleContexts, RankNTypes
     hs-source-dirs: src
-    ghc-options: -fdefer-typed-holes -Wall
+    ghc-options: -fdefer-typed-holes -Wall -O2
 
 test-suite spec
     type: exitcode-stdio-1.0
@@ -45,3 +45,4 @@ benchmark bench
    hs-source-dirs: bench
    build-depends: AlanDeniseEricLauren, base, containers, criterion
    default-language: Haskell2010
+   ghc-options: -O2
