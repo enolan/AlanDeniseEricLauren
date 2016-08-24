@@ -1,5 +1,5 @@
 name: AlanDeniseEricLauren
-version: 0.1.0.0
+version: 0.1.0.1
 cabal-version: >=1.10
 build-type: Simple
 license: BSD3
@@ -9,8 +9,8 @@ maintainer: echo@echonolan.net
 homepage: http://github.com/enolan/AlanDeniseEricLauren
 synopsis: Find the minimal subset/submap satisfying some property.
 description:
-    Please see README.md
-category: Algoritms
+    Find the minimal subset/submap satisfying some arbitrary property.
+category: Algorithms
 author: Echo Nolan
 extra-doc-files: README.md
 
