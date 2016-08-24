@@ -18,6 +18,6 @@ http://ebooks.iospress.nl/publication/37115.
 The project's homepage is https://github.com/enolan/AlanDeniseEricLauren. Bug
 reports and PRs can be submitted there.
 
-As of July 2016, I am looking for work. If your company needs a good programmer,
-my email is echo@echonolan.net. My resume is available
+As of August 2016, I am looking for work. If your company needs a good
+programmer, my email is echo@echonolan.net. My resume is available
 [here](http://www.echonolan.net/resume/cv.html).
